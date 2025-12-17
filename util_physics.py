@@ -39,6 +39,7 @@ class Ball:
         arcade.draw_circle_filled(self.pos[0]*meter, self.pos[1]*meter, self.r, color_from_charge(self.charge))
 
     def update(self, dt, forces=[Force([0.0, 0.0])]):
+        # update ball position and velocity using kinematic equations
         if not self.drag and not self.fixed:
             if self.gravity:
                 self.acc = g + np.sum(forces, axis=0) / self.mass
@@ -70,3 +71,4 @@ class Ball:
 
     def check_hit(self, x, y):
         return (x - self.pos[0])**2 + (y - self.pos[1])**2   <= (self.r/meter)**2
+    
