@@ -4,10 +4,10 @@ This is a simulation tool i am designing for educational purposes. It will conta
 # features to add (in order of priority)
 - [ ] rods, torque etc.
 - [ ] trails for moving objects
-- [ ] magnetic field, magnetism, lorentz force
 - [ ] Current/electricity submodule (simple DC circuits)
 - [ ] Springs, hooke's law, immovable blocks
 - [ ] add main interface
 - [ ] optics, light reflection and refraction
 - [ ] lenses
 - [ ] 3D capability
+- [ ] magnetic field, magnetism, lorentz force
