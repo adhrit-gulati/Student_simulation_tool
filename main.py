@@ -7,7 +7,7 @@ import arcade.gui
 from util_functions import sigmoid_color, create_arrow_texture, color_from_charge
 from PIL import Image, ImageDraw
 from constants import field_grid_spacing, W, H, meter, g, k, energy_loss_edge, energy_loss_ball
-from util_physics import Ball, Force
+from util_physics import Ball, Rod, Force
 
 #create textures
 arrow_tex = create_arrow_texture()
@@ -141,9 +141,9 @@ class Game(arcade.Window):
         arcade.set_background_color(arcade.color.BLACK)
         self.balls = [
             Ball((W//4)/meter, (H//2)/meter, 10, charge= -10e-6),
-            Ball((W//2)/meter, (H//2)/meter, 10),
             Ball((3*W//4)/meter, (H//2)/meter, 10, charge= 10e-6)
         ]
+        #self.rods = [Rod((W//2)/meter, (H//2)/meter, r=7, l=2, angle=1)]
         self.dragged_ball = None
         self.pause = False
         self.ui = arcade.gui.UIManager()
@@ -166,6 +166,8 @@ class Game(arcade.Window):
             self.draw_electric_field()
         for ball in self.balls:
             ball.draw()
+        for rod in self.rods:
+            rod.draw()
         if self.show_box:
             arcade.draw_lbwh_rectangle_filled(0, H - 120, 260, 280, (10, 67, 108, 160))
             self.ui.draw()
@@ -224,6 +226,10 @@ class Game(arcade.Window):
             # update all balls
             for i, ball in enumerate(self.balls):
                 ball.update(dt, force_array[i])
+
+            #update all rods
+            for rod in self.rods:
+                rod.update(dt)
 
             #initialise charges for electric field
             if self.visualize_electric_field:
