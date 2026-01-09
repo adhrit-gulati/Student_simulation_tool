@@ -10,3 +10,5 @@ k = 8.98e9                  # N m^2 C^-2
 
 energy_loss_edge = 0.8
 energy_loss_ball = 0.8
+
+trail_length = 50            # number of points a trail

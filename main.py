@@ -140,10 +140,10 @@ class Game(arcade.Window):
         super().__init__(W, H, "Drag", antialiasing=True)
         arcade.set_background_color(arcade.color.BLACK)
         self.balls = [
-            Ball((W//4)/meter, (H//2)/meter, 10, charge= -10e-6),
-            Ball((3*W//4)/meter, (H//2)/meter, 10, charge= 10e-6)
+            Ball((W//4)/meter, (H//2)/meter, 10, charge= -10e-6, leaves_trail=True),
+            Ball((3*W//4)/meter, (H//2)/meter, 10, charge= 10e-6, leaves_trail=True)
         ]
-        #self.rods = [Rod((W//2)/meter, (H//2)/meter, r=7, l=2, angle=1)]
+        self.rods = []
         self.dragged_ball = None
         self.pause = False
         self.ui = arcade.gui.UIManager()
