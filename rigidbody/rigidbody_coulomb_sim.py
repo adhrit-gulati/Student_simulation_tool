@@ -16,7 +16,7 @@ on_tex = arcade.load_texture("on.png")
 
 class Simulation_edit_ui(arcade.gui.UIBoxLayout):
     def __init__(self, game):
-        super().__init__(x=5, y=H - 115, align="left")
+        super().__init__(align="right")
 
         #gravity checkbox
         b1 = arcade.gui.UIBoxLayout(vertical=False)
@@ -52,8 +52,7 @@ class Simulation_edit_ui(arcade.gui.UIBoxLayout):
         self.add(b3)
 class Ball_edit_ui(arcade.gui.UIBoxLayout):
     def __init__(self, ball):
-        super().__init__(x=5, y=H-115, align="left")
-        # Charge input
+        super().__init__(align="left")
 
         # charge label
         b1 = arcade.gui.UIBoxLayout(vertical=False)
@@ -79,7 +78,6 @@ class Ball_edit_ui(arcade.gui.UIBoxLayout):
                 pass
         self.add(b1)
 
-        # Mass input
 
         # mass label
         b2 = arcade.gui.UIBoxLayout(vertical=False)
@@ -122,6 +120,17 @@ class Ball_edit_ui(arcade.gui.UIBoxLayout):
                 pass
         self.add(b2)
 
+        # trail checkbox
+        b3 = arcade.gui.UIBoxLayout(vertical=False)
+        tlabel = arcade.gui.UILabel(text="Trail:", bold=True, font_name="roboto", text_color=arcade.color.WHITE)
+        tcheckbox = arcade.gui.UITextureToggle(value=ball.leaves_trail, on_texture=on_tex, off_texture=off_tex, width=28, height=32)
+        @tcheckbox.event("on_change")
+        def on_change(event):
+            ball.leaves_trail = tcheckbox.value
+        b3.add(tlabel)
+        b3.add(tcheckbox)
+        self.add(b3)
+
         # Display position, velocity, acceleration
         self.add(arcade.gui.UILabel(
             text=f"Position: ({ball.pos[0]:.2f}, {ball.pos[1]:.2f}) m",
@@ -135,6 +144,8 @@ class Ball_edit_ui(arcade.gui.UIBoxLayout):
             text=f"Acceleration: ({ball.acc[0]:.2f}, {ball.acc[1]:.2f}) m/s²",
             width=300, text_color=arcade.color.WHITE, bold=True, font_name="helvetica"
         ))
+
+
 class Game(arcade.Window):
     def __init__(self):
         super().__init__(W, H, "Drag", antialiasing=True)
@@ -149,6 +160,7 @@ class Game(arcade.Window):
         self.ui = arcade.gui.UIManager()
         self.ui.enable()
         self.show_box = False
+        self.UI = None
         self.gravity_enabled = True
         self.coulomb_enabled = True
         self.visualize_electric_field = False
@@ -168,8 +180,12 @@ class Game(arcade.Window):
             ball.draw()
         for rod in self.rods:
             rod.draw()
-        if self.show_box:
-            arcade.draw_lbwh_rectangle_filled(0, H - 120, 260, 280, (10, 67, 108, 160))
+        if self.UI:
+            rect = self.UI.rect
+            padding = 12
+            l = rect.x-rect.width/2
+            b = rect.y-rect.height/2
+            arcade.draw_lbwh_rectangle_filled(l-padding, b-padding, rect.width+2*padding, rect.height+2*padding, (10, 40, 100, 200))
             self.ui.draw()
 
     def on_update(self, dt):
@@ -294,7 +310,7 @@ class Game(arcade.Window):
         #toggle pause/resume of the simulation, and hide the UI box
         if key == arcade.key.SPACE:
             self.pause = not self.pause
-            self.show_box = False
+            self.UI = None
 
     def draw_electric_field(self):
         for i, sprite in enumerate(self.arrow_list):
@@ -330,18 +346,22 @@ class Game(arcade.Window):
         #create the UI box for editing ball properties
         self.ui.clear()
 
-        #show blue box at corner
         self.show_box = True
+        anchor = arcade.gui.UIAnchorLayout()
         box = Ball_edit_ui(ball)
-        self.ui.add(box)
+        anchor.add(box, anchor_x="left", anchor_y="top", align_x=5, align_y=-15)
+        self.UI = box
+        self.ui.add(anchor)
 
     def simulation_edit(self):
         #create the UI box for editing simulation properties
         self.ui.clear()
+        
         self.show_box = True
-
+        anchor = arcade.gui.UIAnchorLayout()
         box = Simulation_edit_ui(self)
-        self.ui.add(box)
-
+        anchor.add(box, anchor_x="left", anchor_y="top", align_x=5, align_y=-10)
+        self.UI = box
+        self.ui.add(anchor)
 window = Game()
 arcade.run()
