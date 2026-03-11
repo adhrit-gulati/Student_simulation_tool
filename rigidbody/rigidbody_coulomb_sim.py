@@ -4,147 +4,16 @@ import math
 import time
 import arcade.key
 import arcade.gui
-from util_functions import sigmoid_color, create_arrow_texture, color_from_charge
+from util_drawing import sigmoid_color, create_arrow_texture
 from PIL import Image, ImageDraw
-from constants import field_grid_spacing, W, H, meter, g, k, energy_loss_edge, energy_loss_ball
-from util_physics import Ball, Rod, Force
+from constants import field_grid_spacing, W, H, meter, g, k, energy_loss_ball, barrier_draw_radius, barrier_remove_radius
+from util_physics import Ball, Force
+from util_ui import Ball_edit_ui, Simulation_edit_ui
 
 #create textures
 arrow_tex = create_arrow_texture()
-off_tex = arcade.load_texture("off.png")
-on_tex = arcade.load_texture("on.png")
 
-class Simulation_edit_ui(arcade.gui.UIBoxLayout):
-    def __init__(self, game):
-        super().__init__(align="right")
-
-        #gravity checkbox
-        b1 = arcade.gui.UIBoxLayout(vertical=False)
-        glabel = arcade.gui.UILabel(text="Gravity:", font_size=20, text_color=arcade.color.WHITE)
-        gravity_checkbox = arcade.gui.UITextureToggle(value=game.gravity_enabled, width=28, height=32, on_texture=on_tex, off_texture=off_tex)
-        @gravity_checkbox.event("on_change")
-        def on_change(event):
-            game.gravity_enabled = gravity_checkbox.value
-        b1.add(glabel)
-        b1.add(gravity_checkbox)
-        self.add(b1)
-
-        # Electrostatic force checkbox
-        b2 = arcade.gui.UIBoxLayout(vertical=False)
-        clabel = arcade.gui.UILabel(text="Electrostatic force:", font_size=20, text_color=arcade.color.WHITE)
-        coulomb_checkbox = arcade.gui.UITextureToggle(value=game.coulomb_enabled, on_texture=on_tex, off_texture=off_tex, width=28, height=32)
-        @coulomb_checkbox.event("on_change")
-        def on_change(event):
-            game.coulomb_enabled = coulomb_checkbox.value
-        b2.add(clabel)
-        b2.add(coulomb_checkbox)
-        self.add(b2)
-
-        # electric field visualisation checkbox
-        b3 = arcade.gui.UIBoxLayout(vertical=False)
-        eflabel = arcade.gui.UILabel(text="See Electric field:", font_size=20, text_color=arcade.color.WHITE)
-        field_checkbox = arcade.gui.UITextureToggle(value=game.visualize_electric_field, on_texture=on_tex, off_texture=off_tex, width=28, height=32)
-        @field_checkbox.event("on_change")
-        def on_change(event):
-            game.visualize_electric_field = field_checkbox.value
-        b3.add(eflabel)
-        b3.add(field_checkbox)
-        self.add(b3)
-class Ball_edit_ui(arcade.gui.UIBoxLayout):
-    def __init__(self, ball):
-        super().__init__(align="left")
-
-        # charge label
-        b1 = arcade.gui.UIBoxLayout(vertical=False)
-        b1.add(arcade.gui.UILabel(
-            text = f"Charge:",
-            width=300, text_color=arcade.color.WHITE, bold=True, font_name="roboto"
-        ))
-        # charge input box
-        self.charge_input = arcade.gui.UIInputText(text=str(ball.charge*1e6),width=40, text_color=arcade.color.CYAN, border_width=0)
-        self.charge_input.with_padding(top=5)
-        b1.add(self.charge_input)
-        # charge unit label
-        b1.add(arcade.gui.UILabel(
-            text = " μC", text_color=arcade.color.WHITE, bold=True, font_name="roboto"))
-        
-        # charge change function
-        @self.charge_input.event("on_change")
-        def on_charge_change(event):
-            try:
-                val = float(self.charge_input.text)
-                ball.charge = val * 1e-6
-            except ValueError:
-                pass
-        self.add(b1)
-
-
-        # mass label
-        b2 = arcade.gui.UIBoxLayout(vertical=False)
-        b2.add(arcade.gui.UILabel(
-            text="Mass:",
-            width=300,
-            text_color=arcade.color.WHITE,
-            bold=True,
-            font_name="roboto"
-        ))
-
-        # mass input box
-        self.mass_input = arcade.gui.UIInputText(
-            text=str(ball.mass),
-            width=40,
-            text_color=arcade.color.CYAN,
-            border_width=0
-        )
-        self.mass_input.with_padding(top=5)
-        b2.add(self.mass_input)
-
-        # mass unit label
-        b2.add(arcade.gui.UILabel(
-            text=" kg",
-            text_color=arcade.color.WHITE,
-            bold=True,
-            font_name="roboto"
-        ))
-
-        # mass change function
-        @self.mass_input.event("on_change")
-        def on_mass_change(event):
-            try:
-                assert float(self.mass_input.text) != 0.0
-                val = float(self.mass_input.text)
-                ball.mass = val
-                #linearly scale radius by mass
-                ball.r = 20*val/9 + 70/9 
-            except ValueError or AssertionError:
-                pass
-        self.add(b2)
-
-        # trail checkbox
-        b3 = arcade.gui.UIBoxLayout(vertical=False)
-        tlabel = arcade.gui.UILabel(text="Trail:", bold=True, font_name="roboto", text_color=arcade.color.WHITE)
-        tcheckbox = arcade.gui.UITextureToggle(value=ball.leaves_trail, on_texture=on_tex, off_texture=off_tex, width=28, height=32)
-        @tcheckbox.event("on_change")
-        def on_change(event):
-            ball.leaves_trail = tcheckbox.value
-        b3.add(tlabel)
-        b3.add(tcheckbox)
-        self.add(b3)
-
-        # Display position, velocity, acceleration
-        self.add(arcade.gui.UILabel(
-            text=f"Position: ({ball.pos[0]:.2f}, {ball.pos[1]:.2f}) m",
-            width=300, text_color=arcade.color.WHITE, bold=True, font_name="roboto"
-        ))
-        self.add(arcade.gui.UILabel(
-            text=f"Velocity: ({ball.v[0]:.2f}, {ball.v[1]:.2f}) m/s",
-            width=300, text_color=arcade.color.WHITE, bold=True, font_name="helvetica"
-        ))
-        self.add(arcade.gui.UILabel(
-            text=f"Acceleration: ({ball.acc[0]:.2f}, {ball.acc[1]:.2f}) m/s²",
-            width=300, text_color=arcade.color.WHITE, bold=True, font_name="helvetica"
-        ))
-
+#class CollissionBox
 
 class Game(arcade.Window):
     def __init__(self):
@@ -154,7 +23,6 @@ class Game(arcade.Window):
             Ball((W//4)/meter, (H//2)/meter, 10, charge= -10e-6, leaves_trail=True),
             Ball((3*W//4)/meter, (H//2)/meter, 10, charge= 10e-6, leaves_trail=True)
         ]
-        self.rods = []
         self.dragged_ball = None
         self.pause = False
         self.ui = arcade.gui.UIManager()
@@ -165,6 +33,9 @@ class Game(arcade.Window):
         self.coulomb_enabled = True
         self.visualize_electric_field = False
         self.arrow_list = arcade.SpriteList(use_spatial_hash=False)
+        self.barrier_pixels = set()
+        self.making_barrier = False
+        self.removing_barrier = False
         for ygrid in range(round(H/field_grid_spacing)+1):
             for xgrid in range(round(W/field_grid_spacing)+1):
                 sprite = arcade.Sprite(center_x=xgrid*field_grid_spacing, center_y=ygrid*field_grid_spacing)
@@ -176,10 +47,9 @@ class Game(arcade.Window):
         arcade.Window.clear(self)
         if self.visualize_electric_field:
             self.draw_electric_field()
+        arcade.draw_points(self.barrier_pixels, (150,150,150), 1)
         for ball in self.balls:
             ball.draw()
-        for rod in self.rods:
-            rod.draw()
         if self.UI:
             rect = self.UI.rect
             padding = 12
@@ -243,10 +113,6 @@ class Game(arcade.Window):
             for i, ball in enumerate(self.balls):
                 ball.update(dt, force_array[i])
 
-            #update all rods
-            for rod in self.rods:
-                rod.update(dt)
-
             #initialise charges for electric field
             if self.visualize_electric_field:
                 self.charges = np.array(self.charges)
@@ -255,43 +121,75 @@ class Game(arcade.Window):
         shift = m & arcade.key.MOD_SHIFT
         ctrl = m & arcade.key.MOD_CTRL
 
-        for ball in self.balls:
-            #check if ball is clicked
-            if ball.check_hit(x/meter, y/meter):
-                if ctrl:
-                    #ctrl + click deletes a ball
-                    self.delete_ball(ball)
-                    return
-                if shift:
-                    # shift+click opens properties of ball
-                    self.pause = True
-                    self.ball_edit(ball)
-                    return
-                else:
-                    #drag the ball
-                    ball.drag = True
-                    ball.v = np.array([0.0, 0.0])
-                    self.dragged_ball = ball
-                    return  
-        #if no ball is clicked
-        if ctrl:
-            #ctrl + click adds a new ball
-            self.balls.append(Ball(x/meter, y/meter, 10))
-        elif shift:
-            #opens simulation properties
-            self.pause = True
-            self.simulation_edit()
+        if b == arcade.MOUSE_BUTTON_LEFT:
+            for ball in self.balls:
+                #check if ball is clicked
+                if ball.check_hit(x/meter, y/meter):
+                    if ctrl:
+                        #ctrl + click deletes a ball
+                        self.delete_ball(ball)
+                        return
+                    if shift:
+                        # shift+click opens properties of ball
+                        self.pause = True
+                        self.ball_edit(ball)
+                        return
+                    else:
+                        #drag the ball
+                        ball.drag = True
+                        ball.v = np.array([0.0, 0.0])
+                        self.dragged_ball = ball
+                        return  
+            #if no ball is clicked
+            if ctrl:
+                #ctrl + click adds a new ball
+                self.balls.append(Ball(x/meter, y/meter, 10))
+            elif shift:
+                #opens simulation properties
+                self.pause = True
+                self.simulation_edit()
+        elif b == arcade.MOUSE_BUTTON_RIGHT:
+            if shift:
+                self.remove_barrier(x, y, barrier_draw_radius)
+                self.removing_barrier = True
+            else:
+                self.make_barrier(x, y, barrier_draw_radius)
+                self.making_barrier = True
 
     def on_mouse_release(self, x, y, b, m):
-        # undrag the ball
         if self.dragged_ball:
             self.dragged_ball.drag = False
             self.dragged_ball = None
+        self.making_barrier = False
+        self.removing_barrier = False
 
     def on_mouse_motion(self, x, y, dx, dy):
-        #todrag the ball
+        if self.making_barrier or self.removing_barrier:
+            r = barrier_draw_radius if self.making_barrier else barrier_remove_radius
 
-        #get change in time
+            step_measure = max(abs(dx), abs(dy))
+
+            if step_measure <= r/2:
+                if self.making_barrier:
+                    self.make_barrier(x, y, r)
+                else:
+                    self.remove_barrier(x, y, r)
+                return
+
+            steps = int(step_measure // (r/2)) + 1
+            x0 = x - dx
+            y0 = y - dy
+            for i in range(steps + 1):
+                t = i / steps
+                xi = x0 + dx * t
+                yi = y0 + dy * t
+
+                if self.making_barrier:
+                    self.make_barrier(xi, yi, r)
+                else:
+                    self.remove_barrier(xi, yi, r)
+
+
         tnow = time.perf_counter()
         tlast = getattr(self, 'last_time', tnow)
         dt = tnow - tlast
@@ -363,5 +261,22 @@ class Game(arcade.Window):
         anchor.add(box, anchor_x="left", anchor_y="top", align_x=5, align_y=-10)
         self.UI = box
         self.ui.add(anchor)
+
+    def make_barrier(self, X, Y, r):
+        X, Y, r = int(X), int(Y), int(r)
+        for x in range(X-r, X+r+1):
+            for y in range(Y-r, Y+r+1):
+                ar = (x, y)
+                if (np.sqrt((X-x)**2 + (Y-y)**2) <= r):
+                    self.barrier_pixels.add(ar)
+
+    def remove_barrier(self, X, Y, r):
+        X, Y, r = int(X), int(Y), int(r)
+        for x in range(X - r, X + r + 1):
+            for y in range(Y - r, Y + r + 1):
+                ar = (x, y)
+                if np.sqrt((X - x)**2 + (Y - y)**2) <= r:
+                    self.barrier_pixels.discard(ar)
+
 window = Game()
 arcade.run()

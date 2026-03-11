@@ -7,21 +7,16 @@ def sigmoid_color(q, kc=0.5):
     return int(s * 255)
 
 def create_arrow_texture(w=40, h=5):
-
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
 
-    cx = w // 2      # center x (base of arrow)
-    cy = h // 2      # center y
+    cx = w // 2
+    cy = h // 2
 
-    shaft_len = w * 0.4    # length to the right of center
+    shaft_len = w * 0.4
     head_len  = w * 0.1
 
-    # Shaft: from center to near the right
-    d.rectangle(
-        [ (cx, cy - h*0.15), (cx + shaft_len, cy + h*0.15) ],
-        fill="white"
-    )
+    d.rectangle([(cx, cy - h*0.15), (cx + shaft_len, cy + h*0.15)], fill="white")
 
     # Arrow head
     d.polygon(

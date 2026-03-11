@@ -12,3 +12,5 @@ energy_loss_edge = 0.8
 energy_loss_ball = 0.8
 
 trail_length = 50            # number of points a trail
+barrier_draw_radius = 5
+barrier_remove_radius = 15
