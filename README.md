@@ -3,7 +3,7 @@ This is a simulation tool i am designing for educational purposes. It will conta
 
 # features to add (in order of priority)
 - [x] trails for moving objects
-- [ ] Current/electricity submodule (simple DC circuits)
+- [x] Current/electricity submodule (simple DC circuits)
 - [ ] Springs, hooke's law, immovable blocks
 - [ ] rods, torque etc.
 - [ ] add main interface
