@@ -25,7 +25,7 @@ def draw_zigzag(endpoints: List[np.ndarray], line_width, color):
     points = [tuple(p) for p in point_list]
     arcade.draw_line_strip(points, color=color, line_width=line_width)
 
-def draw_voltage_tick(endpoints: List[np.ndarray], color):
+def draw_voltage_tick(endpoints: List[np.ndarray]):
     length = np.linalg.norm(endpoints[1] - endpoints[0])
     if length == 0:
         return
@@ -36,9 +36,9 @@ def draw_voltage_tick(endpoints: List[np.ndarray], color):
     p1 = endpoints[0] + perp_vec * WIDTH * 1.5
     p2 = endpoints[0] - perp_vec * WIDTH * 1.5
 
-    arcade.draw_line(p1[0], p1[1], p2[0], p2[1], color=color)
+    arcade.draw_line(p1[0], p1[1], p2[0], p2[1], color=(244, 148, 0))
 
-def draw_ground_tick(endpoints: List[np.ndarray], color):
+def draw_ground_tick(endpoints: List[np.ndarray]):
     length = np.linalg.norm(endpoints[1] - endpoints[0])
     if length == 0:
         return
@@ -49,18 +49,18 @@ def draw_ground_tick(endpoints: List[np.ndarray], color):
     p1 = endpoints[1] + perp_vec * WIDTH
     p2 = endpoints[1] - perp_vec * WIDTH
 
-    arcade.draw_line(p1[0], p1[1], p2[0], p2[1], color=color)
+    arcade.draw_line(p1[0], p1[1], p2[0], p2[1], color=(99, 162, 214))
 
 def draw_resistor(endpoints: List[np.ndarray], line_width, color, V, G):
     draw_zigzag(endpoints, line_width, color)
     if V:
-        draw_voltage_tick(endpoints, color)
+        draw_voltage_tick(endpoints)
     if G:
-        draw_ground_tick(endpoints, color)
+        draw_ground_tick(endpoints)
 
 def draw_wire(endpoints: List[np.ndarray], color, V, G):
     arcade.draw_line(endpoints[0][0], endpoints[0][1], endpoints[1][0], endpoints[1][1], color=color)
     if V:
-        draw_voltage_tick(endpoints, color)
+        draw_voltage_tick(endpoints)
     if G:
-        draw_ground_tick(endpoints, color)
+        draw_ground_tick(endpoints)

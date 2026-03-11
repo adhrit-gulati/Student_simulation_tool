@@ -79,7 +79,7 @@ class Circuit:
             row += 1
         
         solution = np.linalg.solve(Matrix, B)
-        self.voltages = {node: round(solution[idx], 3) for node, idx in node_index.items()}
+        self.voltages = {node: solution[idx] for node, idx in node_index.items()}
         for node, data in self.graph.nodes(data=True):
             if data['type'] == 'voltage_source':
                 self.voltages[node] = data['voltage']
@@ -88,9 +88,16 @@ class Circuit:
         return self.voltages
 
     def get_current(self, resistor_name):
+        if not self.voltages:
+            raise RuntimeError("Circuit has not been solved yet")
+
         for u, v, key, data in self.graph.edges(data=True, keys=True):
             if key == resistor_name:
-                return round( abs(self.voltages[u]-self.voltages[v]) / data["resistance"] , 3)
+                if u not in self.voltages or v not in self.voltages:
+                    raise RuntimeError("Circuit not solved")
+                return round(abs(self.voltages[u] - self.voltages[v]) / data["resistance"], 3)
+
+        raise ValueError(f"Component '{resistor_name}' not found")
 
     def __repr__(self):
         return (
