@@ -2,7 +2,9 @@ import numpy as np
 import arcade
 from util_drawing import color_from_charge
 import math
-from constants import meter, g, energy_loss_edge, H, W, trail_length
+from constants import meter, g, energy_loss_ball_edge, H, W, trail_length
+
+ball_edge_coeff_restitution = math.sqrt(energy_loss_ball_edge)
 
 class Force(np.ndarray):
     def __new__(cls, input_array, pos=None):
@@ -57,7 +59,7 @@ class Ball:
                 self.acc += g
             self.pos += self.v*dt + 0.5 * self.acc * dt**2
             self.v += self.acc * dt * self.velcoeff
-            self.do_edge_collisions(energy_loss_edge)
+            self.do_edge_collisions(ball_edge_coeff_restitution)
 
         if self.leaves_trail:
             if len(self.trail) < trail_length:
@@ -66,26 +68,57 @@ class Ball:
                 self.trail.pop(0)
                 self.trail.append(self.pos.copy())
     
+    def collide_normal(self, normal, rcoeff, pos_correction=0.0):
+        normal = np.array(normal, dtype=float)
+        mag = np.linalg.norm(normal)
+        if mag < 1e-8:
+            return
+
+        n = normal / mag
+
+        v_rel = np.dot(self.v, n)
+        if v_rel < 0:
+            self.v = self.v - (1 + rcoeff) * v_rel * n
+
+        if pos_correction != 0:
+            self.pos += (n * pos_correction) / meter
+
     def do_edge_collisions(self, s):
-        loss = math.sqrt(s)
         p_pos = self.pos * meter
 
-        # X-axis collisions
         if p_pos[0] < self.r:
-            self.pos[0] = (self.r)/meter
-            self.v[0] *= -loss
-        elif p_pos[0] > W - self.r:
-            self.pos[0] = (W - self.r)/meter
-            self.v[0] *= -loss
+            self.pos[0] = self.r / meter
+            self.collide_normal([1, 0], s)
 
-        # Y-axis collisions
+        elif p_pos[0] > W - self.r:
+            self.pos[0] = (W - self.r) / meter
+            self.collide_normal([-1, 0], s)
+
         if p_pos[1] < self.r:
-            self.pos[1] = self.r/meter
-            self.v[1] *= -loss
+            self.pos[1] = self.r / meter
+            self.collide_normal([0, 1], s)
+
         elif p_pos[1] > H - self.r:
-            self.pos[1] = (H - self.r)/meter
-            self.v[1] *= -loss
+            self.pos[1] = (H - self.r) / meter
+            self.collide_normal([0, -1], s)
 
     def check_hit(self, x, y):
         return (x - self.pos[0])**2 + (y - self.pos[1])**2   <= (self.r/meter)**2
     
+    def occupied_pixels(self):
+        pixels = []
+
+        cx = int(self.pos[0] * meter)
+        cy = int(self.pos[1] * meter)
+        r = int(self.r)
+
+        r2 = r * r
+
+        for x in range(cx - r, cx + r + 1):
+            dx2 = (x - cx) * (x - cx)
+            for y in range(cy - r, cy + r + 1):
+                dy = y - cy
+                if dx2 + dy*dy <= r2:
+                    pixels.append((x, y))
+
+        return pixels

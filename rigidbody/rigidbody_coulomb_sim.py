@@ -5,16 +5,17 @@ import time
 import arcade.key
 import arcade.gui
 from util_drawing import sigmoid_color, create_arrow_texture
-from PIL import Image, ImageDraw
-from constants import field_grid_spacing, W, H, meter, g, k, energy_loss_ball, barrier_draw_radius, barrier_remove_radius
+from constants import field_grid_spacing, W, H, meter, g, k, energy_loss_ball_ball, barrier_draw_radius, barrier_remove_radius, energy_loss_ball_barrier, number_substeps
 from util_physics import Ball, Force
 from util_ui import Ball_edit_ui, Simulation_edit_ui
 
 #create textures
-arrow_tex = create_arrow_texture()
+arrow_tex = create_arrow_texture() 
+
+ball_ball_coeff_restitution = math.sqrt(energy_loss_ball_ball)
+ball_barrier_coeff_restitution = math.sqrt(energy_loss_ball_barrier)
 
 #class CollissionBox
-
 class Game(arcade.Window):
     def __init__(self):
         super().__init__(W, H, "Drag", antialiasing=True)
@@ -59,63 +60,85 @@ class Game(arcade.Window):
             self.ui.draw()
 
     def on_update(self, dt):
-        if not self.pause:
-            force_array = []
-            self.charges = []
+        dt = dt/number_substeps
+        for i in range(number_substeps):
+            if not self.pause:
+                force_array = []
+                self.charges = []
 
-            #loop though all balls
-            for ball in self.balls:
-                ball.gravity = self.gravity_enabled
-                forces = [Force([0.0, 0.0])]
-                if ball.charge != 0 and self.visualize_electric_field:
-                    self.charges.append([ball.pos[0], ball.pos[1], ball.charge])
+                #loop though all balls
+                for ball in self.balls:
+                    ball.gravity = self.gravity_enabled
+                    forces = [Force([0.0, 0.0])]
+                    if ball.charge != 0 and self.visualize_electric_field:
+                        self.charges.append([ball.pos[0], ball.pos[1], ball.charge])
 
-                # ball- ball interactions
-                for other in self.balls:
-                    if other != ball:
-                        # vector from other ball to this ball (meters)
-                        r = ball.pos - other.pos
-                        # magnitude of vector
-                        m_r = np.linalg.norm(r)
+                    # ball- ball interactions
+                    for other in self.balls:
+                        if other != ball:
+                            r = ball.pos - other.pos
+                            if not (abs(ball.pos[0] - other.pos[0]) > (ball.r + other.r)/meter or abs(ball.pos[1] - other.pos[1]) > (ball.r + other.r)/meter):
+                                m_r2 = r[0]**2 + r[1]**2
 
-                        #normal vector from other ball to this ball
-                        if m_r == 0:
-                            n = np.array([0.0, 0.0])
-                        else:
-                            n = r / m_r
+                                if m_r2 == 0:
+                                    continue
 
-                        # if collission of balls
-                        if m_r < (ball.r + other.r)/meter and m_r > 0:
-                            #relative velocity along normal
-                            v_rel = ball.v - other.v
-                            v_rel_n = np.dot(v_rel, n)
-                            
-                            #if balls are moving towards each other
-                            if v_rel_n < 0:
-                                #apply collision
-                                j = -(1 + math.sqrt(energy_loss_ball)) * v_rel_n / (1/ball.mass + 1/other.mass)
-                                
-                                ball.v += j * n / ball.mass
-                                other.v -= j * n / ball.mass
-                                
-                                #fix positional overlap of balls
-                                overlap = (ball.r + other.r)/meter - m_r
-                                ball.pos += n * (overlap * 0.5)
-                                other.pos -= n * (overlap * 0.5)
+                                # collision check
+                                if m_r2 < ((ball.r + other.r)/meter)**2:
+                                    m_r = math.sqrt(m_r2)
+                                    overlap = (ball.r + other.r) - (m_r * meter)
+                                    n = r / m_r
+                                    v_rel = ball.v - other.v
+                                    v_rel_n = np.dot(v_rel, n)
 
-                        # apply coulomb force
-                        if self.coulomb_enabled:
-                            forces.append((Force(k * (ball.charge * other.charge) * r) / m_r**3) if m_r > 1e-5 else Force([0.0, 0.0]))
-                
-                force_array.append(forces)
+                                    if v_rel_n < 0:
+                                        j = -(1 + ball_ball_coeff_restitution) * v_rel_n / (1/ball.mass + 1/other.mass)
 
-            # update all balls
-            for i, ball in enumerate(self.balls):
-                ball.update(dt, force_array[i])
+                                        ball.v += j * n / ball.mass
+                                        other.v -= j * n / other.mass
 
-            #initialise charges for electric field
-            if self.visualize_electric_field:
-                self.charges = np.array(self.charges)
+                                    overlap = ((ball.r + other.r) / meter) - m_r
+                                    if overlap > 0:
+                                        ball.pos += n * (overlap * 0.5)
+                                        other.pos -= n * (overlap * 0.5)
+                            # apply coulomb force
+                            if self.coulomb_enabled:
+                                if not (ball.charge == 0 or other.charge == 0):
+                                    m_r = np.linalg.norm(r)
+                                    forces.append((Force(k * (ball.charge * other.charge) * r) / (m_r)**3) if m_r > 1e-5 else Force([0.0, 0.0]))
+                        
+                    # ball - barrier interactions
+                    nearest_pixel = None
+                    min_d2 = float("inf")
+
+                    for p in ball.occupied_pixels():
+                        if p in self.barrier_pixels:
+                            dx = ball.pos[0] - p[0]/meter
+                            dy = ball.pos[1] - p[1]/meter
+                            d2 = dx*dx + dy*dy
+
+                            if d2 < min_d2:
+                                min_d2 = d2
+                                nearest_pixel = p
+
+                    if nearest_pixel:
+                        r = ball.pos - np.array(nearest_pixel)/meter
+                        dist = math.sqrt(min_d2) * meter
+                        overlap = ball.r - dist
+
+                        if overlap > 0:
+                            ball.collide_normal(r, ball_barrier_coeff_restitution, overlap)
+                    
+                    
+                    force_array.append(forces)
+
+                # update all balls
+                for i, ball in enumerate(self.balls):
+                    ball.update(dt, force_array[i])
+
+                #initialise charges for electric field
+                if self.visualize_electric_field:
+                    self.charges = np.array(self.charges)
 
     def on_mouse_press(self, x, y, b, m):
         shift = m & arcade.key.MOD_SHIFT
