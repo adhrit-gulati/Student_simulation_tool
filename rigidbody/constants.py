@@ -17,3 +17,6 @@ barrier_draw_radius = 5
 barrier_remove_radius = 15
 
 number_substeps = 10
+
+NAVBAR_HEIGHT = 40
+SIDEBAR_WIDTH = 100

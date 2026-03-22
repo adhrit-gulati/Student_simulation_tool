@@ -1,4 +1,5 @@
 import arcade
+import arcade.gui
 
 off_tex = arcade.load_texture("off.png")
 on_tex = arcade.load_texture("on.png")
@@ -41,7 +42,7 @@ class Simulation_edit_ui(arcade.gui.UIBoxLayout):
         self.add(b3)
 class Ball_edit_ui(arcade.gui.UIBoxLayout):
     def __init__(self, ball):
-        super().__init__(align="left")
+        super().__init__(align="left")    
 
         # charge label
         b1 = arcade.gui.UIBoxLayout(vertical=False)
@@ -133,3 +134,121 @@ class Ball_edit_ui(arcade.gui.UIBoxLayout):
             text=f"Acceleration: ({ball.acc[0]:.2f}, {ball.acc[1]:.2f}) m/s²",
             width=300, text_color=arcade.color.WHITE, bold=True, font_name="helvetica"
         ))
+
+class Navbar_ui(arcade.gui.UIBoxLayout):
+    def __init__(self, height, size_hint, game):
+        super().__init__(
+            vertical=False,
+            size_hint=size_hint,
+            height=height
+        )
+        self.game = game
+
+        text_style = {
+            "font_size": 14,
+            "font_color": arcade.color.WHITE,
+            "bg": None,
+            "border": None,
+        }
+
+        hover_style = {
+            "font_size": 14,
+            "font_color": arcade.color.LIGHT_GRAY,
+            "bg": None,
+            "border": None,
+        }
+
+        press_style = {
+            "font_size": 14,
+            "font_color": arcade.color.GRAY,
+            "bg": None,
+            "border": None,
+        }
+
+        style = {
+            "normal": text_style,
+            "hover": hover_style,
+            "press": press_style,
+        }
+
+        self.space_between = 10
+        self.padding = (10, 5, 10, 5)
+        btn_height = height
+
+        # --- Home button ---
+        home_btn = arcade.gui.UIFlatButton(text="Home", width=100, height=btn_height)
+        home_btn.style = style
+        @home_btn.event("on_click")
+        def on_home_click(event):
+            self.on_home()
+
+        self.add(home_btn)
+
+        # --- Pause / Play toggle ---
+        self.pause_btn = arcade.gui.UIFlatButton(text="Pause", width=120, height=btn_height, )
+        self.pause_btn.style = style
+        @self.pause_btn.event("on_click")
+        def on_pause_click(event):
+            self.on_pause_toggle()
+
+        self.add(self.pause_btn)
+
+        # --- Clear button ---
+        clear_btn = arcade.gui.UIFlatButton(text="Clear", width=100, height=btn_height)
+        clear_btn.style = style
+        @clear_btn.event("on_click")
+        def on_clear_click(event):
+            self.on_clear()
+
+        self.add(clear_btn)
+
+        # --- Simulation settings ---
+        settings_btn = arcade.gui.UIFlatButton(text="Settings", width=120, height=btn_height)
+        settings_btn.style = style
+        @settings_btn.event("on_click")
+        def on_settings_click(event):
+            self.on_settings()
+
+        self.add(settings_btn)
+
+    # --------handlers --------
+
+    def on_home(self):
+        pass
+        #when homescreen is added this will get something to do
+
+    def on_pause_toggle(self):
+        self.game.pause_sim_toggle()
+        if self.game.pause:
+            self.pause_btn.text = "Play"
+        else:
+            self.pause_btn.text = "Pause"
+
+    def on_clear(self):
+        self.game.clear()
+
+    def on_settings(self):
+        self.game.simulation_edit()
+
+
+class Sidebar_ui(arcade.gui.UIGridLayout):
+    def __init__(self, width):
+        super().__init__(
+            column_count=1,
+            row_count=5,
+            size_hint=(None, 1.0),
+            width=width
+        )
+
+        self.padding = (5, 5, 5, 5)
+        self.vertical_spacing = 5
+
+        for i in range(5):
+            self.add(
+                arcade.gui.UILabel(
+                    text=f"Tool {i+1}",
+                    text_color=arcade.color.WHITE
+                ),
+                column=0,
+                row=i
+            )

@@ -5,9 +5,9 @@ import time
 import arcade.key
 import arcade.gui
 from util_drawing import sigmoid_color, create_arrow_texture
-from constants import field_grid_spacing, W, H, meter, g, k, energy_loss_ball_ball, barrier_draw_radius, barrier_remove_radius, energy_loss_ball_barrier, number_substeps
+from constants import field_grid_spacing, W, H, meter, g, k, energy_loss_ball_ball, barrier_draw_radius, barrier_remove_radius, energy_loss_ball_barrier, number_substeps, SIDEBAR_WIDTH, NAVBAR_HEIGHT
 from util_physics import Ball, Force
-from util_ui import Ball_edit_ui, Simulation_edit_ui
+from util_ui import Ball_edit_ui, Simulation_edit_ui, Navbar_ui, Sidebar_ui
 
 #create textures
 arrow_tex = create_arrow_texture() 
@@ -18,31 +18,73 @@ ball_barrier_coeff_restitution = math.sqrt(energy_loss_ball_barrier)
 #class CollissionBox
 class Game(arcade.Window):
     def __init__(self):
-        super().__init__(W, H, "Drag", antialiasing=True)
+        super().__init__(W+SIDEBAR_WIDTH, H+NAVBAR_HEIGHT, "Simulation Window", antialiasing=True)
         arcade.set_background_color(arcade.color.BLACK)
+        
+        # Initialize balls
         self.balls = [
             Ball((W//4)/meter, (H//2)/meter, 10, charge= -10e-6, leaves_trail=True),
             Ball((3*W//4)/meter, (H//2)/meter, 10, charge= 10e-6, leaves_trail=True)
         ]
         self.dragged_ball = None
-        self.pause = False
-        self.ui = arcade.gui.UIManager()
-        self.ui.enable()
-        self.show_box = False
-        self.UI = None
-        self.gravity_enabled = True
-        self.coulomb_enabled = True
-        self.visualize_electric_field = False
-        self.arrow_list = arcade.SpriteList(use_spatial_hash=False)
+        
+        self.init_ui()
+
+        self.initialise_sim_settings()
+        
+        # Initialize barriers
         self.barrier_pixels = set()
         self.making_barrier = False
         self.removing_barrier = False
+        
+        # Initialize electric field visualization
+        self.arrow_list = arcade.SpriteList(use_spatial_hash=False)
         for ygrid in range(round(H/field_grid_spacing)+1):
             for xgrid in range(round(W/field_grid_spacing)+1):
                 sprite = arcade.Sprite(center_x=xgrid*field_grid_spacing, center_y=ygrid*field_grid_spacing)
                 sprite.texture = arrow_tex
                 sprite.height = sprite.texture.height
                 self.arrow_list.append(sprite)
+
+    def initialise_sim_settings(self):
+        self.pause = False
+        self.gravity_enabled = True
+        self.coulomb_enabled = True
+        self.visualize_electric_field = False
+
+    def clear(self):
+        self.balls = []
+        self.barrier_pixels = set()
+        self.initialise_sim_settings()
+
+    def init_ui(self):
+        self.ui = arcade.gui.UIManager()
+        self.ui.enable()
+        # root anchor
+        anchor = arcade.gui.UIAnchorLayout()
+        self.ui.add(anchor)
+
+        # root vertical layout
+        self.root = arcade.gui.UIBoxLayout(vertical=True, size_hint=(1.0, 1.0))
+        anchor.add(self.root, anchor_x="left", anchor_y="top")
+
+        # navbar
+        self.navbar = Navbar_ui(NAVBAR_HEIGHT, (1.0, None), self)
+        self.root.add(self.navbar)
+
+        # main horizontal area
+        self.main = arcade.gui.UIBoxLayout(vertical=False, size_hint=(1.0, 1.0))
+        self.root.add(self.main)
+
+        # left content
+        self.leftlayout = arcade.gui.UIBoxLayout(vertical=True, size_hint=(1.0, 1.0), align="left")
+        self.main.add(self.leftlayout)
+
+        # sidebar (right)
+        self.sidebar = Sidebar_ui(SIDEBAR_WIDTH)
+        self.main.add(self.sidebar)
+
+        self.editor = None
 
     def on_draw(self):
         arcade.Window.clear(self)
@@ -51,13 +93,26 @@ class Game(arcade.Window):
         arcade.draw_points(self.barrier_pixels, (150,150,150), 1)
         for ball in self.balls:
             ball.draw()
-        if self.UI:
-            rect = self.UI.rect
+        self.draw_ui_rects(editor_col=(10, 40, 100, 200), navbar_col=(9, 50, 103, 200), sidebar_col=(9, 50, 103, 200))
+        self.ui.draw()
+
+    def draw_ui_rects(self, editor_col, navbar_col, sidebar_col):
+        if self.editor:
+            rect = self.editor.rect
             padding = 12
             l = rect.x-rect.width/2
             b = rect.y-rect.height/2
-            arcade.draw_lbwh_rectangle_filled(l-padding, b-padding, rect.width+2*padding, rect.height+2*padding, (10, 40, 100, 200))
-            self.ui.draw()
+            arcade.draw_lbwh_rectangle_filled(l, b-padding, rect.width+padding, rect.height+padding, editor_col)
+        rect = self.navbar.rect
+        padding = 0
+        l = rect.x-rect.width/2
+        b = rect.y-rect.height/2
+        arcade.draw_lbwh_rectangle_filled(l-padding, b-padding, rect.width+2*padding, rect.height+2*padding, navbar_col)
+        rect = self.sidebar.rect
+        padding = 0
+        l = rect.x-rect.width/2
+        b = rect.y-rect.height/2
+        arcade.draw_lbwh_rectangle_filled(l-padding, b-padding, rect.width+2*padding, rect.height+2*padding, sidebar_col)
 
     def on_update(self, dt):
         dt = dt/number_substeps
@@ -154,7 +209,6 @@ class Game(arcade.Window):
                         return
                     if shift:
                         # shift+click opens properties of ball
-                        self.pause = True
                         self.ball_edit(ball)
                         return
                     else:
@@ -165,11 +219,8 @@ class Game(arcade.Window):
                         return  
             #if no ball is clicked
             if ctrl:
-                #ctrl + click adds a new ball
                 self.balls.append(Ball(x/meter, y/meter, 10))
             elif shift:
-                #opens simulation properties
-                self.pause = True
                 self.simulation_edit()
         elif b == arcade.MOUSE_BUTTON_RIGHT:
             if shift:
@@ -230,11 +281,17 @@ class Game(arcade.Window):
     def on_key_press(self, key, modifiers):
         #toggle pause/resume of the simulation, and hide the UI box
         if key == arcade.key.SPACE:
-            self.pause = not self.pause
-            self.UI = None
+            self.pause_sim_toggle()
+
+    def pause_sim_toggle(self):
+        self.pause = not self.pause
+        if self.editor:
+            self.leftlayout.remove(self.editor)
+        self.editor = None
+        self.ui.trigger_render()
 
     def draw_electric_field(self):
-        for i, sprite in enumerate(self.arrow_list):
+        for sprite in self.arrow_list:
                 pos = np.array([sprite.center_x, sprite.center_y]) / meter #position of one point (unit-meters)
 
                 #electric field at point
@@ -264,26 +321,22 @@ class Game(arcade.Window):
         self.balls.remove(ball)
 
     def ball_edit(self, ball):
+        self.pause = True
         #create the UI box for editing ball properties
-        self.ui.clear()
-
-        self.show_box = True
-        anchor = arcade.gui.UIAnchorLayout()
+        if self.editor:
+            self.leftlayout.remove(self.editor)
         box = Ball_edit_ui(ball)
-        anchor.add(box, anchor_x="left", anchor_y="top", align_x=5, align_y=-15)
-        self.UI = box
-        self.ui.add(anchor)
+        self.leftlayout.add(box)
+        self.editor = box
 
     def simulation_edit(self):
+        self.pause = True
         #create the UI box for editing simulation properties
-        self.ui.clear()
-        
-        self.show_box = True
-        anchor = arcade.gui.UIAnchorLayout()
+        if self.editor:
+            self.leftlayout.remove(self.editor)
         box = Simulation_edit_ui(self)
-        anchor.add(box, anchor_x="left", anchor_y="top", align_x=5, align_y=-10)
-        self.UI = box
-        self.ui.add(anchor)
+        self.leftlayout.add(box)
+        self.editor = box
 
     def make_barrier(self, X, Y, r):
         X, Y, r = int(X), int(Y), int(r)
