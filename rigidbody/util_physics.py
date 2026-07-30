@@ -122,3 +122,7 @@ class Ball:
                     pixels.append((x, y))
 
         return pixels
+    
+    """
+class Spring():
+    def __init__(self, fixed_point: np.ndarray, movable_point: np.ndarray, number_segments: int, spring_constant: float, color)"""

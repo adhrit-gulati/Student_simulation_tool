@@ -19,4 +19,4 @@ barrier_remove_radius = 15
 number_substeps = 10
 
 NAVBAR_HEIGHT = 40
-SIDEBAR_WIDTH = 100
+SIDEBAR_WIDTH = 200

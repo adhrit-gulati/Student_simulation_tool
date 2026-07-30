@@ -15,7 +15,6 @@ arrow_tex = create_arrow_texture()
 ball_ball_coeff_restitution = math.sqrt(energy_loss_ball_ball)
 ball_barrier_coeff_restitution = math.sqrt(energy_loss_ball_barrier)
 
-#class CollissionBox
 class Game(arcade.Window):
     def __init__(self):
         super().__init__(W+SIDEBAR_WIDTH, H+NAVBAR_HEIGHT, "Simulation Window", antialiasing=True)
@@ -81,7 +80,7 @@ class Game(arcade.Window):
         self.main.add(self.leftlayout)
 
         # sidebar (right)
-        self.sidebar = Sidebar_ui(SIDEBAR_WIDTH)
+        self.sidebar = Sidebar_ui(SIDEBAR_WIDTH, self)
         self.main.add(self.sidebar)
 
         self.editor = None
