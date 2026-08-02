@@ -123,7 +123,7 @@ class Game(arcade.Window):
                 #loop though all balls
                 for ball in self.balls:
                     ball.gravity = self.gravity_enabled
-                    forces = [Force([0.0, 0.0])]
+                    forces = [ball.constantappliedforce]
                     if ball.charge != 0 and self.visualize_electric_field:
                         self.charges.append([ball.pos[0], ball.pos[1], ball.charge])
 

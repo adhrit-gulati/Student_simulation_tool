@@ -197,6 +197,8 @@ class Ball_edit_ui(arcade.gui.UIBoxLayout):
             font_name="roboto"
         ))
 
+        self.add(self._info_label("Applied Force", ball.constantappliedforce, "N"))
+
         # Charge
         self.add(LabeledInput(
             "Charge:",
@@ -224,6 +226,17 @@ class Ball_edit_ui(arcade.gui.UIBoxLayout):
             ball.leaves_trail,
             lambda v: setattr(ball, "leaves_trail", v)
         ))
+        # show velocity/acceleration vector
+        self.add(LabeledCheckbox(
+            "Show velocity vector:",
+            ball.vel_arrow,
+            lambda v: setattr(ball, "vel_arrow", v)
+        ))     
+        self.add(LabeledCheckbox(
+            "Show acceleration vector:",
+            ball.acc_arrow,
+            lambda v: setattr(ball, "acc_arrow", v)
+        ))     
 
     def _info_label(self, name, vec, unit):
         return VectorInput(text=name, value=vec, unit=unit)

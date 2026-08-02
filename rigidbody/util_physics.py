@@ -1,6 +1,6 @@
 import numpy as np
 import arcade
-from util_drawing import color_from_charge
+from util_drawing import color_from_charge, draw_arrow
 import math
 from constants import meter, g, energy_loss_ball_edge, H, W, trail_length
 
@@ -39,6 +39,9 @@ class Ball:
         self.gravity=gravity
         self.leaves_trail = leaves_trail
         self.trail = []
+        self.vel_arrow = True
+        self.acc_arrow = False
+        self.constantappliedforce = Force([0.0, 0.0])
 
     def draw(self):
         if self.leaves_trail:
@@ -50,6 +53,11 @@ class Ball:
                 n += 1
 
         arcade.draw_circle_filled(self.pos[0]*meter, self.pos[1]*meter, self.r, color_from_charge(self.charge))
+
+        if self.vel_arrow:
+            draw_arrow(self.pos[0]*meter, self.pos[1]*meter, self.v, color = arcade.color.ORANGE)
+        if self.acc_arrow:
+            draw_arrow(self.pos[0]*meter, self.pos[1]*meter, self.acc, color = arcade.color.GREEN)
 
     def update(self, dt, forces=[Force([0.0, 0.0])]):
         # update ball position and velocity using kinematic equations
