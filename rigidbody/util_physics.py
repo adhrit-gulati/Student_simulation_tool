@@ -69,6 +69,10 @@ class Ball:
             self.v += self.acc * dt * self.velcoeff
             self.do_edge_collisions(ball_edge_coeff_restitution)
 
+        if self.fixed:
+            self.v = np.array([0.0, 0.0])
+            self.acc = np.array([0.0, 0.0])
+
         if self.leaves_trail:
             if len(self.trail) < trail_length:
                 self.trail.append(self.pos.copy())

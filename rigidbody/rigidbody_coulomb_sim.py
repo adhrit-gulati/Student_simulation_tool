@@ -153,8 +153,10 @@ class Game(arcade.Window):
 
                                     overlap = ((ball.r + other.r) / meter) - m_r
                                     if overlap > 0:
-                                        ball.pos += n * (overlap * 0.5)
-                                        other.pos -= n * (overlap * 0.5)
+                                        if not ball.fixed:
+                                            ball.pos += n * (overlap * 0.5)
+                                        if not other.fixed:
+                                            other.pos -= n * (overlap * 0.5)
                             # apply coulomb force
                             if self.coulomb_enabled:
                                 if not (ball.charge == 0 or other.charge == 0):

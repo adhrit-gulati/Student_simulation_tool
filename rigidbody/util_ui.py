@@ -237,6 +237,15 @@ class Ball_edit_ui(arcade.gui.UIBoxLayout):
             ball.acc_arrow,
             lambda v: setattr(ball, "acc_arrow", v)
         ))     
+        def a(v):
+            setattr(ball, "fixed", v)
+            setattr(ball, "v", np.array([0.0,0.0]))
+
+        self.add(LabeledCheckbox(
+                    "fix object:",
+                    ball.fixed,
+                    a
+                ))    
 
     def _info_label(self, name, vec, unit):
         return VectorInput(text=name, value=vec, unit=unit)
